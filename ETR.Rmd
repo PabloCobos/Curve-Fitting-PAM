@@ -1,0 +1,275 @@
+---
+title: "Ajuste RLC Eilers & Peeters (1988)"
+output: html_notebook
+---
+
+# Breve introducción al uso del script
+
+Este script tiene un mecanismo sencillo, mediante el cual ajustará las curvas rápidas de luz obtenidas directamente del PAM. 
+
+El formato del archivo e introducir la información de la forma adecuada es fundamental para que este script pueda funcionar. Las indicaciones se podrán encontrar tanto en forma de texto en la parte superior, como en el propio script, las cuales se han indicado con texto comentado (tras una #, #Esto sería un comentario). 
+
+El modelo de Eilers & Peeters (1988) viene definido como:
+
+$$P=\frac{E}{aE^2+bE+c}$$
+Donde P hace referencia a la fotosíntesis, E a la irradiancia y a, b y c son parámetros del modelo. 
+
+## Cómo exportar y preparar los datos del PAM
+
+El programa Win 3 nos permite exportar un archivo .csv, y este será el que el script leerá. Además, este archivo debe haberse exportado seleccionando únicamente la opción "Data time format", remove marks y File: 
+
+![](exportar.png)
+
+## Cómo ordenar los datos
+
+Una vez se obtiene el .csv, este necesita tener un formato específico antes de cargarse en R. Por lo tanto, estas modificaciones deberán hacerse manteniendo el formato .csv, usando excel. 
+
+* Los nombres de las muestras apareceran como títulos de las gráficas, siempre y cuando el nombre se haya escrito en la primera columna del csv. El primer nombre deberá aparecer en la fila 6, y todos los nombres deberán ir inmediatamente debajo de la fila en la que aparece "chart start". 
+
+* En el csv la primera columna deberá ser la de "chart start" si se usó un batch o light curve si se hizo de la forma predeterminada. Por lo general aparecerán filas que el programa escribe de forma automática, como la fecha y el nombre del mismo programa o el dispositivo, estas deberán de ser borradas. 
+
+* Si hay curvas que no tienen el mismo número de puntos porque se pararon antes de acabar, estas deberán de ser eliminadas. Solo deben de dejarse aquellas que estén completas con el número de puntos que se indica al principio del script.
+
+![_Datos de ejemplo_](Ordenar.png)
+
+## Información anexa
+
+*Es imprescindible que los ficheros que se desean cargar estén en la misma carpeta que en la que se guarda el script*, si no, no los encontrará y no podrá abrirlos.
+
+Para introducir los datos de absortancia de los talos además de la irradiancia para las RLC, se deberá crear un archivo .csv en excel. Este tiene que contener en la primera columna todas las absorbancias medidas para cada talo, y deben de estar introducidas en el mismo orden que el de las muestras en el archivo .csv del PAM. **Debe haber tantas absortancias** como muestras haya. 
+Las irradiancias se deberán adjuntar en la segunda columna de este .csv, siendo necesario que estas estén ordenadas en orden creciente. **No olvidar la irradiancia 0*. *Deben haber tantas irradiancias como Nº de puntos por curva**. 
+
+![_Archivo con las absortancias y las irradiancias_](Ejemplo.PNG)
+
+## Como usar el script
+
+Este script está diseñado para que funcione para todo tipo de datos una vez que se han seguido los pasos anteriores. Aún así, hay que hacer pequeñas modificaciones de este para que pueda procesar de forma adecuada los datos. Estas modificaciones únicamente se deben de hacer en las *líneas que se encuentran en el archivo rmd a la izquierda (sombreado en gris)*:
+* 126 y 127: estas líneas instalan y cargar respectivamente el package dyplir, usado para filtrar los datos. La línea 126 es la que lo instala, por lo que solo deberá ejecutarse la primera vez que se use el script (quitar la almohadilla), y tras esto, se deberá volver a comentar (volver a ponerla). La línea 127 siempre debe estar activa (sin la almohadilla), para cargar siempre el package. 
+
+* 130: en esta se determinan el número de puntos de las curvas a ajustar. **Ojo**, siempre hay que tener en cuenta contar también el punto 0.
+
+* 131: en esta se determina $\phi_{II}$, es decir, la proporción de fotones que se asume que llegan al fotosistema 2 (en un tanto por 1)
+
+* 136: se debe escribir el nombre del archivo csv a procesar. **Ojo, es imprescindible** que se escriba .csv al final, además, tampoco se pueden borrar las comillas que engloban a este nombre
+
+* 137: se debe escribir el nombre del archivo que recoge los datos de absortancia y de irradiancia. **Ojo, es imprescindible** que se escriba .csv al final, además, tampoco se pueden borrar las comillas que engloban a este nombre.
+
+* 138: se debe escribir el nombre que se desea que tenga el archivo que exporta los parámetros fotosintéticos. **Ojo, es imprescindible** que se escriba .csv al final, además, tampoco se pueden borrar las comillas que engloban a este nombre.
+
+* 139: se debe escribir el nombre que se desea que tenga el archivo que exporta los parámetros fotosintéticos. **Ojo, es imprescindible** que se escriba .csv al final, además, tampoco se pueden borrar las comillas que engloban a este nombre.
+
+* 144, 145, 146: son los parámetros iniciales para la iteración numérica. 
+
+* 147, 148, 149: estos factores dividen a "a", "b" y "c", determinando así la magnitud de los parámetros. Por lo general los valores son 1000000 para factora (aunque valores de 1000 también son comunes), 100 para factorb y 0.1 para factorc. *Si los ajustes que se obtienen no son buenos es muy probable que deba cambiarse la magnitud de estos factores*.
+
+* Pulsar Control+Shift+Intro o clickar el botón "run" y procesará el script
+
+* **Atención**: es muy recomendable borrar el global environment cada vez que se ejecute el script, para así evitar que surjan problemas. *El global environment se borra pulsando el icono de una escoba en el apartado environment en R Studio*. ![limpiar el global environment](GE.png)
+
+## Ficheros generados
+
+Tras ejecutar el script, si no ha dado ningún problema, generará dos ficheros .csv con el punto como separador decimal.
+
+Un primer fichero se denomina Parámetros (línea 138), y este se nombrará tal y como se ha escrito entre las comillas. En este podemos encontrar:
+ 
+* $F_v/F_m$: máximo rendimiento fotoquímico, unidades relativas.
+
+* Eficiencia fotosintética ($\alpha$): en el .csv lo encontraremos como "alfa", y sus unidades son $e^- fotones^{1}$.
+
+* Irradiancia de fotoinhibición ($E_{opt}$): es la irradiancia a la cual aparece fotoinhibición, por lo que sus unidades son $\mu moles ~ fotones ~ m^{-2} s^{-1}$ .  
+
+* Irradiancia de saturación ($E_k$): es la irradiancia en la cual la curva comienza a saturarse, por lo que sus unidades son  $\mu moles ~ fotones ~ m^{-2} s^{-1}$. 
+
+* Intervalo de irradiancia saturante ($E_{ok}$): es el intervalo entre $E_k$ y $E_{opt}$, sus unidades son $\mu moles ~ fotones ~ m^{-2} s^{-1}$.
+
+* Tasa máxima de transporte de electrones ($ETR_m$): sus unidades son 
+$\mu moles ~ e^{-1} fotones^{-1} s^{-1}$
+
+* $w$: es un indicador de la magnitud relativa de la fotoinhibición. Valores menores de $2$ indican fotoinhibición pronunciada, valores mayores fotoinhibición leve. Un valor de 10 podría interpretarse como una curva sin fotoinhibicón. Más desarrollo se puede encontrar en el artículo original de Eilers & Peeters (1988). En la Figura 2 de este artículo se pueden encontrar ejemplos de representaciones gráficas para distintos valores de w. 
+
+* $R^2$
+
+* $Nombre  ~ de ~ la ~ muestra ~ a ~ la ~ que ~ corresponden ~ los ~ resultados$
+
+El segundo fichero que se genera (línea 139), exporta los datos de Irradiancia introducidos en la información anexa, además de la ETR medida y la ETR calculada por la función ajustada. 
+
+## Errores comunes
+
+Cuando el script no funcione, esto se puede deber a diferentes causas. En primer lugar, hay que tener cuidado a la hora de modificar las líneas que es necesario modificar, únicamente cambiando los valores indicados, dejando todo lo demás exactamente igual. 
+
+Además, la consola de R reportará un mensaje de error según el punto del script que haya fallado, algunos de estos mensajes pueden ser: 
+
+* *[...] replacement has 91 rows, data has 104*: el texto que viene delante del escrito aquí nos dirá en qué paso del script ha fallado. Sin embargo, este error es reportado cuando alguno de los archivos que hemos cargado tiene un número distinto de datos al que debería tener. Por ejemplo, en este caso el archivo de PAM contiene 104 filas, mientras que el archivo de absortancias tiene una menos de la que debería. De esta forma, cuando ha calculado las ETR, los últimos trece puntos (una curva), no tienen una absorbancia asignada, por lo que no puede calcularlos. El mensaje de error completo que se obtuvo fue: 
+*Error in `$<-.data.frame`(`*tmp*`, Absortancia, value = c(0.962, 0.962,  : 
+  replacement has 91 rows, data has 104*
+  
+La *solución* se basaría en revisar todos los archivos adjuntos, confirmando que el número de datos que se introdujo es el correcto. *OJO*, este error también puede producirse si cuando se introdujeron los datos del PAM, alguna curva tiene puntos de menos o de más. Además, también debería revisarse que el número de puntos de curva que se ha designado es el correcto.
+
+* Error in Datos_PAM %>% filter(Name == "F" | Name == "FO") : 
+  no se pudo encontrar la función "%>%": este error ocurrirá cuando el package dyplir, que se usa para filtrar los datos, no está instalado o debidamente cargado. La solución radica en las líneas (126 y 127) del script.
+  
+En primer lugar, se debe confirmar si está instalado, esto se puede confirmar de dos formas. En R Studio existe la opción de ver los Packages instalados en una de las cuatro ventanas principales. Si seleccionamos  packages, se pueden ver todos aquellos que tenemos instalados, y los que tenemos cargados aparecerán con un check. Si aqué no aparece dyplir, es que no está instalado, y por el contrario, si no tiene el chek es que no se ha cargado.
+
+![](Packages.png)
+  
+Este error aparecerá, por lo general, si se no se ha ejecutado bien el script, ya que este contiene una línea para instalar el package y otra para cargarlo. La línea que lo instala es la 126 y solo deberá ejecutarse la primera vez que se use el código, descomentandola. Es decir, quitando la almohadilla (#), y tras ejecutarlo la primera vez, volviendo a ponerla. Por otro lado, la línea 127 carga este package, por lo que esta siempre deberá estar *sin* la almohadilla (#). Si se usa de esta forma, no debería haber problemas de este tipo.  
+
+* *Error: unexpected symbol in "", dec="."*: este error aparece siempre que hay un error gramatical, es decir, cuando el script tiene un símbolo que no debería estar ahí. Encontrarlo puede ser complicado, sin embargo, dado que solo se modificarán las líneas designadas para esto, localizarlo debería ser relativamente sencillo. 
+
+El error no debería aparecer siempre y cuando se use el script de forma adecuada, manteniendo los formatos establecidos. Aun así, con un descuido que elimine un "-" de "<-", dejando únicamente "<", o eliminando una de las comillas. 
+
+* *no fue posible abrir el archivo 'Semana4_2021049.csv': No such file or directoryError in file(file, "rt") : no se puede abrir la conexión*: este error radica en que uno de los archivos que se desea cargar están mal nombrados o no se encuentran en el directorio de trabajo. La solución se basa en comprobar que se ha escrito bien el nombre en las líneas 136 y 137 o que el archivo está en la misma carpeta que el script de R. 
+
+```{r}
+#Esta librería nos ayudará a filtrar los datos
+# SI NUNCA SE HA USADO, DEBERÁ DE QUITARSE LA ALMOHADILLA DEL COMANDO install.packages(dyplyr), ya que instalará el package por nosotros. De otra forma, el script no podrá funcionar. Una vez instalado en el ordenador (la primera vez que se corra el script), se vuelve a poner la almohadilla, por lo que se interpretará como comentario y no se ejecutará.
+#install.packages(dplyr)
+library(dplyr)
+
+#Se definen los parámetros básicos
+NumeroPuntosCurva <- 9
+FactorFi <- 0.5
+
+#Este objeto contiene el nombre del archivo que se exporta con los resultados. ES IMPORTANTE NO ELIMINAR LAS COMILLAS. TAMPOCO SE PUEDE OLVIDAR ESCRIBIR EL .csv , YA QUE SINO NO EL ORDENADOR NO RECONOCERÁ EL FORMATO DEL ARCHIVO. 
+#El segundo objeto se refiere al archivo que exportamos con los datos del PAM y el tercero al archivo que contiene la absortancia y el PAR.   
+
+ArchivoPAM <- "PAM_RUGU_15_03_plantilla.csv"
+ArchivoAbsortanciaPAR <- "Absortanciapar.csv"
+Parametros <- "Parametros.csv"
+Curvas <- "Curvas.csv"
+
+#Para ajustar según el modelo de P & E 1988. a, b y c son los parámetros que plantea el modelo, es decir, aquellos que se optimizarán. Factor a, factor b y factor c sirve para cambiar la magnitud de los parámetros a b y c respectivamente.
+#Esto hace que la iteración numérica de mejor resultados. Se recomienda cambiar la magnitud de factor a, factor b y factor c si los parámetros obtenidos resultan en NaN o el valor de R2 es bajo. 
+#Por lo general las magnitudes son 1000000 para a (aunque valores de 1000 también son comunes), 100 para b y 0.1 para c.
+a <- 0.2
+b <- 7
+c <- 0.1
+factora <- 1000000
+factorb <- 100
+factorc <- 0.1
+
+
+
+
+#Se leen los archivos anexos, siempre tienen que estar en la misma carpeta que el archivo .rmd (este script)
+Datos_PAM <- read.csv(ArchivoPAM, header=FALSE, sep=";", dec=".")
+Absortancia_PAR <- read.csv(ArchivoAbsortanciaPAR, header=FALSE, sep=";", dec=".")
+NombresCurvas <- Datos_PAM$V1[seq(2, length(Datos_PAM$V1), (NumeroPuntosCurva+2))]
+#Extraemos las columnas de los ficheros que nos son de interés 
+Name <- Datos_PAM$V4
+F <- Datos_PAM$V6
+Fm <- Datos_PAM$V7
+
+Absortancia <- rep(na.omit(Absortancia_PAR$V1), each=NumeroPuntosCurva)
+Muestra <- rep(NombresCurvas, each=NumeroPuntosCurva)
+
+#Creamos un grupo de datos a partir de las columnas de interés
+Datos_PAM <- data.frame(Name, F, Fm )
+
+#Se filtran los datos y se transforman a formato numérico
+Datos_PAM <- Datos_PAM %>% filter(Name=="F" | Name=="FO")
+Datos_PAM$PAR <- rep(Absortancia_PAR$V2, times=(length(Datos_PAM$F)/NumeroPuntosCurva))
+Datos_PAM$Muestra <- Muestra
+Datos_PAM$Absortancia <- Absortancia
+Datos_PAM <- transform(Datos_PAM, F=as.numeric(as.character(F)), Fm=as.numeric(as.character(Fm)), PAR=as.numeric(as.character(PAR)), Absortancia=as.numeric(as.character(Absortancia)))
+
+#Un bucle repite el cálculo de YIELD para todas las muestras
+for(i in 1:(length (Datos_PAM$Fm))){
+  Datos_PAM$YIELD[i] <- ((Datos_PAM$Fm[i] - Datos_PAM$F[i])/Datos_PAM$Fm[i]) 
+}
+
+#Obtención del primer punto del Yield para cada curva (Fv/Fm)
+FvFm <- Datos_PAM$YIELD[seq(1, length(Datos_PAM$YIELD), NumeroPuntosCurva)]
+
+#Cálculo de ETR
+for(i in 1:(length (Datos_PAM$Fm))){
+  Datos_PAM$ETR[i] <- Datos_PAM$YIELD[i] * FactorFi  * Datos_PAM$PAR[i]* Datos_PAM$Absortancia[i]
+}
+
+ #Definimos la función a ajustar 
+EP <- function(a, b, c, I){I/(I^2*(a/factora
+)+I*(b/factorb)+(c/factorc))}
+
+#La función error que vamos a usar como criterio
+ ERROR_EP <- function(dat,par){ 
+  EP_Aj <- EP(par[1], par[2], par[3], Datos_Ajuste$PAR)
+  with(dat, sum((Datos_Ajuste$ETR-EP_Aj)^2))
+ }
+ 
+  Vector_Errores <- function(dat,par){ 
+  EP_Aj <- EP(par[1], par[2], par[3], Datos_Ajuste$PAR)
+  with(dat, (((Datos_Ajuste$ETR-EP_Aj)^2)/var(Datos_Ajuste$ETR)))
+  }
+
+#Se crean vectores para almacenar los datos de los parámetros. ARESULT, BRESULT Y CRESULT son vectores que obtendrán el valor de los parámetros a, b y c respectivamente tras el tanteo, por si se desean consultar.
+alfa <- vector()
+Eopt <- vector()
+Ek <- vector()
+Eopt <- vector()
+Eok <- vector ()
+ETRm <- vector()
+w <- vector()
+R2<- vector()
+ARESULT <- vector()
+BRESULT <- vector()
+CRESULT <- vector()  
+
+ETRteo <- vector()
+#Designamos el número de curvas que se han cargado
+n <- nrow(Datos_PAM)/NumeroPuntosCurva
+
+#Definimos el bucle de ajuste
+for (i in 1:n){
+  acaba <- NumeroPuntosCurva*i
+  empieza <- acaba - (NumeroPuntosCurva-1)
+  PAR<- Datos_PAM[empieza:acaba,4]
+  ETR <- Datos_PAM[empieza:acaba,8]
+  Muestra <- Datos_PAM[empieza:acaba,5]
+  Datos_Ajuste <- data.frame(PAR, ETR)
+#El ajuste de los parámetros, según la función error, usando los datos descritos. Este método de iteración se ha elegido porque permite establecer limitaciones a la iteración numérica. De esta forma, podemos evitar que a, b o c produzcan valores negativos, que se traducirían en la imposibilidad de calcular algunos parámetros cuando esto ocurriese.
+  
+  AjusteEP <- optim(par=c(a,b,c),fn=ERROR_EP, dat=Datos_Ajuste, method= "L-BFGS-B",lower=c(0,0,1*10^-100))
+  
+  ETRteo[empieza:acaba] <-EP(AjusteEP$par[1], AjusteEP$par[2], AjusteEP$par[3], PAR)
+  #Cálculo de R2 
+  Valor_Error <- AjusteEP$value
+  R2[i]<- 1 - Valor_Error/(var(Datos_Ajuste$ETR)*(length(Datos_Ajuste$ETR)-1)) 
+  
+  
+  #Obtención de parámetros
+  ARESULT[i] <- (AjusteEP$par[1])
+  BRESULT[i] <- (AjusteEP$par[2])
+  CRESULT[i] <- (AjusteEP$par[3])
+  
+  alfa[i] <- 1/(AjusteEP$par[3]/factorc)
+  Eopt[i] <- sqrt((AjusteEP$par[3]/factorc)/(AjusteEP$par[1]/factora))
+  ETRm[i] <- 1/((AjusteEP$par[2]/factorb)+2*sqrt((AjusteEP$par[1]/factora)*(AjusteEP$par[3]/factorc)))
+  Ek[i] <- (AjusteEP$par[3]/factorc)/((AjusteEP$par[2]/factorb)+2*sqrt(((AjusteEP$par[1]/factora)*AjusteEP$par[3]/factorc)))
+  w[i] <- AjusteEP$par[2]/sqrt((AjusteEP$par[1]/factora)*(AjusteEP$par[3]/factorc))
+  Eok[i] <- Eopt[i] - Ek[i]
+  
+  #Representación gráfica del ajuste
+  plot(Datos_Ajuste$PAR, Datos_Ajuste$ETR, xlab=expression(paste(mu,"mol" ~"fotones" ~ m^-2 ~ s^-1)), ylab=expression(paste(mu,"mol"~ e^-1 ~ m^-2 ~ s^-1)), lwd=1.5,
+     main=Muestra[1], cex.main=0.8, cex.lab=0.8, pch = 19)
+lines(Datos_Ajuste$PAR, EP(AjusteEP$par[1],AjusteEP$par[2],AjusteEP$par[3], Datos_Ajuste$PAR), col = "snow4")
+
+}
+NombresCurvasExport <- rep(NombresCurvas, each=NumeroPuntosCurva)
+Export_ETR <- data.frame(Datos_PAM$PAR, Datos_PAM$ETR, ETRteo, NombresCurvasExport)
+
+write.csv(Export_ETR, file=Curvas)
+
+Resultados <- data.frame(FvFm, alfa, Eopt, Ek, Eok, ETRm, w, R2, NombresCurvas)
+
+ # Si se desea exportar la información con puntos como el separador decimal
+  write.csv(Resultados, file=Parametros)
+  
+  
+ #Si se desea exportar la información con el punto coma el separador decimal
+ #write.csv2(Resultados, file="ResultadosSemana4.csv")
+ #write.csv2(Export_ETR, file=ETR)
+
+ 
+
+
+```
